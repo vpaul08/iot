@@ -9,28 +9,37 @@ app.get('/', (req, res) => {
 })
 
 app.get('/items/:item', (req, res) => {
-  var config = {
+  const config = {
     method: 'get',
-    url: `https://${process.env.USERNAME}:${process.env.PASSWORD}@${process.env.OPENHAB_HOST}/items/${req.params.item}`
+    url: `https://${process.env.USERNAME}:${process.env.PASSWORD}@${process.env.OPENHAB_HOST}/items/${req.params.item}_Power`
   };
+  const item = req.params.item;
 
   axios(config)
-  .then((response) => {
+  .then(async (response) => {
     if (response.data.state === "NULL") {
-      res.send(`${req.params.item} does not exist.`);
+      console.error(`${item} does not exist.`);
+      res.send(`${item} does not exist.`);
     } else {
-      res.send(`${req.params.item} is ${response.data.state}`);
-    }
+      const curState = response.data.state;
+      console.log(`State of ${item} is ${curState}`);
 
+      let newState = "OFF";
+      if (curState === "OFF") newState = "ON";
+
+      await toggle(item, newState);
+      res.send(`${item} is ${curState}. Turning it ${newState}`);
+    }
   })
   .catch((error) => {
+    console.log(error);
     res.send(error);
   });
 });
 
 app.get('/items', (req, res) => {
 
-  var config = {
+  const config = {
     method: 'get',
     url: `https://${process.env.USERNAME}:${process.env.PASSWORD}@${process.env.OPENHAB_HOST}/items`
   };
@@ -40,8 +49,30 @@ app.get('/items', (req, res) => {
     res.send(response.data);
   })
   .catch((error) => {
+    console.log(error);
     res.send(error);
   });
 });
+
+async function toggle(item, newState) {
+  console.log(`Turning ${item} ${newState}`);
+  const config = {
+    method: 'post',
+    url: `https://${process.env.USERNAME}:${process.env.PASSWORD}@${process.env.OPENHAB_HOST}/items/${item}`,
+    data: newState,
+    headers: {
+      'Content-Type': 'text/plain',
+      'Cookie': 'X-OPENHAB-AUTH-HEADER=true;'
+    }
+  };
+
+  axios(config)
+  .then(function (response) {
+    console.log(JSON.stringify(response.data));
+  })
+  .catch(function (error) {
+    console.log(error);
+  });
+}
 
 app.listen(process.env.PORT, () => console.log(`Server running on port ${process.env.PORT}`));
