@@ -9,7 +9,23 @@ app.get('/', (req, res) => {
 })
 
 app.get('/items/:item', (req, res) => {
-  res.send(req.params);
+  var config = {
+    method: 'get',
+    url: `https://${process.env.USERNAME}:${process.env.PASSWORD}@${process.env.OPENHAB_HOST}/items/${req.params.item}`
+  };
+
+  axios(config)
+  .then((response) => {
+    if (response.data.state === "NULL") {
+      res.send(`${req.params.item} does not exist.`);
+    } else {
+      res.send(`${req.params.item} is ${response.data.state}`);
+    }
+
+  })
+  .catch((error) => {
+    res.send(error);
+  });
 });
 
 app.get('/items', (req, res) => {
