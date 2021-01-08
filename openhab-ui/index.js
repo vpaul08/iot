@@ -5,6 +5,10 @@ const app = express();
 app.set('views', './views')
 app.set('view engine', 'jade')
 
+app.get('/', (req, res) => {
+  res.send('Hello World!')
+})
+
 app.get('/360vr', (req, res) => {
   res.render('360vr');
 })
