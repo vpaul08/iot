@@ -4,16 +4,23 @@ const dotenv = require('dotenv');
 dotenv.config();
 const app = express();
 
+/**
+ * Health check
+ */
 app.get('/', (req, res) => {
   res.send('Hello World!')
 })
 
+/**
+ * Link for toggling item
+ */
 app.get('/items/:item', (req, res) => {
+  const item = req.params.item;
   const config = {
     method: 'get',
-    url: `https://${process.env.USERNAME}:${process.env.PASSWORD}@${process.env.OPENHAB_HOST}/items/${req.params.item}_Power`
+    url: `https://${process.env.USERNAME}:${process.env.PASSWORD}@${process.env.OPENHAB_HOST}/items/${item}_Power`
   };
-  const item = req.params.item;
+
 
   axios(config)
   .then(async (response) => {
@@ -27,7 +34,7 @@ app.get('/items/:item', (req, res) => {
       let newState = "OFF";
       if (curState === "OFF") newState = "ON";
 
-      await toggle(item, newState);
+      await setItemState(item, newState);
       res.send(`${item} is ${curState}. Turning it ${newState}`);
     }
   })
@@ -37,8 +44,29 @@ app.get('/items/:item', (req, res) => {
   });
 });
 
-app.get('/items', (req, res) => {
+/**
+ * Link for blinking multiple items
+ */
+app.get('/blink', async (req, res) => {
+  const items = ['Kitchen', 'Livingroom', 'VinnisPlug', 'MainHallway'];
+  console.log(`Blinking ${items}`);
 
+  setItemsState(items, 'OFF');
+  await delay(2000);
+  setItemsState(items, 'ON');
+  await delay(2000);
+  setItemsState(items, 'OFF');
+  await delay(2000);
+  setItemsState(items, 'ON');
+  await delay(2000);
+
+  res.send('And it Blinked!');
+});
+
+/**
+ * Link for getting all items' attributes
+ */
+app.get('/items', (req, res) => {
   const config = {
     method: 'get',
     url: `https://${process.env.USERNAME}:${process.env.PASSWORD}@${process.env.OPENHAB_HOST}/items`
@@ -54,7 +82,24 @@ app.get('/items', (req, res) => {
   });
 });
 
-async function toggle(item, newState) {
+/**
+ * Set state for multiple items
+ * @param {*} items
+ * @param {*} newState
+ */
+async function setItemsState(items, newState) {
+  console.log(`Turning all ${newState}`);
+  items.forEach(async (item) => {
+    await setItemState(item, newState);
+  });
+}
+
+/**
+ * Set state for single item
+ * @param {*} item
+ * @param {*} newState
+ */
+async function setItemState(item, newState) {
   console.log(`Turning ${item} ${newState}`);
   const config = {
     method: 'post',
@@ -68,10 +113,22 @@ async function toggle(item, newState) {
 
   axios(config)
   .then(function (response) {
-    console.log(JSON.stringify(response.data));
+    console.log(`${item} turned ${newState}`);
   })
   .catch(function (error) {
     console.log(error);
+  });
+}
+
+/**
+ * Helper for explicit delay
+ * @param {*} delayInms
+ */
+function delay(delayInms) {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      resolve(2);
+    }, delayInms);
   });
 }
 
